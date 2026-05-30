@@ -2,7 +2,6 @@
 
 <div align="center">
 
-![RouteIQ Banner](docs/banner.png)
 
 [![Python](https://img.shields.io/badge/Python-3.10%2B-3776AB?logo=python&logoColor=white)](https://python.org)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.28%2B-FF4B4B?logo=streamlit&logoColor=white)](https://streamlit.io)
@@ -218,33 +217,7 @@ The platform auto-generates operational recommendations including:
 
 ---
 
-## 📝 Resume-Ready Achievements
-
-> *"Built a logistics optimization platform analysing 1M+ delivery and operational records to identify route inefficiencies, SLA risks, and rider allocation bottlenecks using Python, SQL, Streamlit, and geospatial analytics."*
-
-> *"Developed predictive models achieving 93.8% accuracy in estimating late-delivery risks and operational bottlenecks while designing live dashboards tracking 12+ logistics KPIs for data-driven delivery optimization."*
-
----
-
-## 🎯 Interview Q&A
-
-**Q: How did you ensure the dataset is realistic?**  
-A: Applied a realistic demand curve with peak multipliers at lunch (11–14h) and dinner (18–21h), monsoon-aware weather simulation, rider experience-based performance scoring, and city-weighted order distribution matching actual quick-commerce market shares.
-
-**Q: What was your feature engineering approach for the ML models?**  
-A: Used cyclical encoding (sin/cos) for time features to avoid discontinuity, engineered a composite `late_risk_score` combining congestion, route efficiency, weather, and peak flags, and created rolling store-level load indices to capture capacity pressure.
-
-**Q: How does the Recommendations Engine work?**  
-A: It's a rule-based threshold engine that consumes live KPI outputs and generates prioritized operational alerts. It checks SLA breach rate, rider utilization band, store capacity pressure, congestion factor, and weather disruption against predefined thresholds — then generates specific, actionable recommendations with estimated impact.
-
-**Q: How would you scale this to production?**  
-A: Replace Parquet files with a PostgreSQL/DuckDB backend, add Airflow/Prefect for scheduled ETL, deploy Streamlit on AWS/GCP with Redis caching for KPI cards, and wire the ML serving layer to a FastAPI microservice with Celery for async batch scoring.
-
----
-
-## 📄 License
-
-MIT License — see [LICENSE](LICENSE) for details.
+Made with <3 by: Asmit Choudhary
 
 ---
 
