@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+*.pkl
+*.egg-info/
+dist/
+build/
+.env
+.venv/
+venv/
+*.log
+data/processed/
+models/artifacts/*.pkl
+.DS_Store
+*.ipynb_checkpoints

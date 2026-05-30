@@ -1,0 +1,33 @@
+name: RouteIQ CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+      - name: Run pipeline (sample mode)
+        run: python run_pipeline.py --no-models
+      - name: Validate outputs
+        run: |
+          python -c "
+          import pandas as pd
+          from pathlib import Path
+          sample = Path('data/sample')
+          for name in ['orders_enriched', 'riders', 'dark_stores']:
+              df = pd.read_parquet(sample / f'{name}.parquet')
+              assert len(df) > 0, f'{name} is empty'
+              print(f'✓ {name}: {len(df):,} rows')
+          print('All outputs valid')
+          "

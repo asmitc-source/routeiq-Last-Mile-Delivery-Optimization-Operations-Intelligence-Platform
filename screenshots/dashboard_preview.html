@@ -1,0 +1,1551 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RouteIQ — Delivery Operations Intelligence</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+  :root {
+    --bg:       #080C14;
+    --bg2:      #0C1220;
+    --surface:  #101829;
+    --card:     #111D2E;
+    --border:   #1C2E44;
+    --border2:  #243548;
+    --text:     #E2EAF4;
+    --muted:    #5A7494;
+    --muted2:   #3D5870;
+    --primary:  #0EA5E9;
+    --primary2: #38BDF8;
+    --accent:   #F59E0B;
+    --success:  #10B981;
+    --danger:   #EF4444;
+    --warning:  #F97316;
+    --purple:   #8B5CF6;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Subtle noise texture overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.4;
+  }
+
+  /* ─── Layout ─────────────────────────────────────────────── */
+  .app { display: flex; min-height: 100vh; position: relative; z-index: 1; }
+
+  /* ─── Sidebar ────────────────────────────────────────────── */
+  .sidebar {
+    width: 220px;
+    flex-shrink: 0;
+    background: var(--bg2);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+  }
+
+  .sidebar-logo {
+    padding: 1.4rem 1.2rem 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo-mark {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.5rem;
+    letter-spacing: -0.03em;
+    color: var(--text);
+    line-height: 1;
+  }
+  .logo-mark span { color: var(--primary); }
+  .logo-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    margin-top: 3px;
+  }
+
+  .sidebar-section {
+    padding: 1rem 1rem 0.5rem;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.58rem;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted2);
+  }
+
+  .sidebar-nav { flex: 1; padding: 0.3rem 0.5rem; }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.55rem 0.7rem;
+    border-radius: 7px;
+    cursor: pointer;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--muted);
+    transition: all 0.15s;
+    margin-bottom: 1px;
+    border: 1px solid transparent;
+  }
+  .nav-item:hover { background: var(--surface); color: var(--text); border-color: var(--border); }
+  .nav-item.active { background: #0EA5E918; color: var(--primary2); border-color: #0EA5E935; }
+  .nav-item .icon { font-size: 1rem; width: 18px; }
+
+  .sidebar-filter {
+    padding: 0.8rem 1rem;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .filter-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .filter-select {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    padding: 6px 8px;
+    color: var(--text);
+    font-size: 0.78rem;
+    font-family: 'DM Sans', sans-serif;
+    outline: none;
+    cursor: pointer;
+    margin-bottom: 8px;
+  }
+  .filter-select:focus { border-color: var(--primary); }
+
+  .model-status { padding: 0.8rem 1rem; }
+  .model-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 3px 0;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.62rem;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 4px;
+    margin-bottom: 4px;
+  }
+  .model-badge {
+    color: var(--success);
+    font-weight: 600;
+  }
+
+  /* ─── Main ───────────────────────────────────────────────── */
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ─── Header bar ─────────────────────────────────────────── */
+  .header {
+    padding: 0.85rem 1.8rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-shrink: 0;
+  }
+  .header-left { display: flex; flex-direction: column; gap: 2px; }
+  .header-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: var(--text);
+  }
+  .header-sub {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.62rem;
+    color: var(--muted);
+    letter-spacing: 0.06em;
+  }
+  .header-right { display: flex; align-items: center; gap: 1rem; }
+  .live-badge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--success);
+    background: #10b98112;
+    border: 1px solid #10b98130;
+    border-radius: 20px;
+    padding: 4px 10px;
+  }
+  .live-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--success);
+    animation: pulse-dot 2s infinite;
+  }
+  @keyframes pulse-dot { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(0.8)} }
+
+  .header-stat {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.65rem;
+    color: var(--muted);
+    text-align: right;
+  }
+  .header-stat strong {
+    display: block;
+    font-size: 0.78rem;
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  /* ─── Content ────────────────────────────────────────────── */
+  .content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1.2rem 1.8rem;
+  }
+
+  /* ─── Section label ─────────────────────────────────────── */
+  .section-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.62rem;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--muted);
+    margin-bottom: 0.75rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  /* ─── KPI Grid ───────────────────────────────────────────── */
+  .kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.65rem;
+    margin-bottom: 1.2rem;
+  }
+
+  .kpi-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.9rem 0.85rem;
+    position: relative;
+    overflow: hidden;
+    cursor: default;
+    transition: border-color 0.2s, transform 0.15s;
+    animation: fadeUp 0.4s ease both;
+  }
+  .kpi-card:hover { border-color: var(--border2); transform: translateY(-1px); }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .kpi-card::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    border-radius: 10px 10px 0 0;
+  }
+  .kpi-card.c-blue::after   { background: var(--primary); }
+  .kpi-card.c-green::after  { background: var(--success); }
+  .kpi-card.c-red::after    { background: var(--danger); }
+  .kpi-card.c-amber::after  { background: var(--accent); }
+  .kpi-card.c-orange::after { background: var(--warning); }
+  .kpi-card.c-purple::after { background: var(--purple); }
+  .kpi-card.c-muted::after  { background: var(--muted); }
+
+  .kpi-icon {
+    font-size: 0.95rem;
+    margin-bottom: 0.4rem;
+    opacity: 0.7;
+  }
+  .kpi-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.58rem;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--muted);
+    margin-bottom: 0.3rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .kpi-value {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 1.55rem;
+    line-height: 1;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+  .kpi-sub {
+    font-size: 0.68rem;
+    color: var(--muted);
+    margin-top: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .kpi-delta {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem;
+    padding: 2px 5px;
+    border-radius: 4px;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    margin-top: 5px;
+    font-weight: 600;
+  }
+  .delta-good  { background: #10b98118; color: var(--success); }
+  .delta-bad   { background: #ef444418; color: var(--danger); }
+  .delta-warn  { background: #f9731618; color: var(--warning); }
+  .delta-neut  { background: #5a749418; color: var(--muted); }
+
+  /* ─── Chart Grid ─────────────────────────────────────────── */
+  .charts-row {
+    display: grid;
+    gap: 0.8rem;
+    margin-bottom: 0.8rem;
+  }
+  .charts-2 { grid-template-columns: 1fr 1fr; }
+  .charts-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .charts-21 { grid-template-columns: 2fr 1fr; }
+  .charts-12 { grid-template-columns: 1fr 2fr; }
+
+  .chart-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem;
+    animation: fadeUp 0.5s ease both;
+  }
+  .chart-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.7rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .chart-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 0.8rem;
+    color: var(--text);
+  }
+  .chart-badge {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border2);
+    color: var(--muted);
+  }
+  .chart-canvas-wrap { position: relative; }
+
+  /* ─── Tabs ───────────────────────────────────────────────── */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 9px;
+    padding: 4px;
+    margin-bottom: 1.2rem;
+    width: fit-content;
+  }
+  .tab-btn {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.78rem;
+    font-weight: 500;
+    padding: 0.4rem 0.9rem;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--muted);
+    background: transparent;
+    border: none;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .tab-btn:hover { color: var(--text); background: var(--surface); }
+  .tab-btn.active { background: var(--primary); color: #fff; }
+
+  /* ─── Alert cards ────────────────────────────────────────── */
+  .alert-box {
+    border-radius: 8px;
+    padding: 0.85rem 1rem;
+    margin-bottom: 0.6rem;
+    border-left-width: 3px;
+    border-left-style: solid;
+    border-top: 1px solid;
+    border-right: 1px solid;
+    border-bottom: 1px solid;
+    animation: fadeUp 0.4s ease both;
+  }
+  .alert-critical { background:#1a0808; border-left-color:#EF4444; border-color:#7f1d1d; }
+  .alert-high     { background:#150f04; border-left-color:#F97316; border-color:#7c3a00; }
+  .alert-medium   { background:#05141f; border-left-color:#0EA5E9; border-color:#0c2d48; }
+  .alert-ok       { background:#041510; border-left-color:#10B981; border-color:#064e35; }
+
+  .alert-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.82rem;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  .alert-body { font-size: 0.76rem; color: var(--muted); line-height: 1.55; }
+  .alert-meta {
+    margin-top: 6px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem;
+    color: var(--muted2);
+    display: flex;
+    gap: 12px;
+  }
+  .alert-meta span { display: flex; align-items: center; gap: 3px; }
+
+  /* ─── Table ──────────────────────────────────────────────── */
+  .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.78rem;
+  }
+  .data-table th {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    text-align: left;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .data-table td {
+    padding: 7px 10px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+  .data-table tr:last-child td { border-bottom: none; }
+  .data-table tr:hover td { background: #ffffff04; }
+
+  .badge-ok   { background:#10b98120; color:var(--success); padding:2px 7px; border-radius:4px; font-size:0.68rem; font-weight:600; }
+  .badge-warn { background:#f9731620; color:var(--warning); padding:2px 7px; border-radius:4px; font-size:0.68rem; font-weight:600; }
+  .badge-bad  { background:#ef444420; color:var(--danger);  padding:2px 7px; border-radius:4px; font-size:0.68rem; font-weight:600; }
+
+  /* ─── Model card ─────────────────────────────────────────── */
+  .model-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.65rem; margin-bottom: 1rem; }
+  .model-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .model-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--primary), var(--success));
+  }
+  .model-name {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.62rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 0.5rem;
+  }
+  .model-score {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 2rem;
+    color: var(--success);
+    line-height: 1;
+  }
+  .model-meta { font-size: 0.7rem; color: var(--muted); margin-top: 4px; }
+
+  /* ─── Scrollbar ──────────────────────────────────────────── */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  /* ─── Tab panels ─────────────────────────────────────────── */
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ─── Mini sparkline ─────────────────────────────────────── */
+  .sparkline-wrap { display: flex; align-items: flex-end; gap: 1px; height: 28px; margin-top: 4px; }
+  .spark-bar {
+    flex: 1;
+    background: var(--primary);
+    opacity: 0.5;
+    border-radius: 1px 1px 0 0;
+    transition: opacity 0.2s;
+    min-width: 2px;
+  }
+  .spark-bar:hover { opacity: 1; }
+
+  /* ─── City list ──────────────────────────────────────────── */
+  .city-list { list-style: none; }
+  .city-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 7px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.8rem;
+  }
+  .city-row:last-child { border: none; }
+  .city-name { font-weight: 500; }
+  .city-bar-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    margin: 0 12px;
+  }
+  .city-bar-bg {
+    flex: 1;
+    height: 4px;
+    background: var(--surface);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .city-bar-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: var(--primary);
+  }
+  .city-pct {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 0.7rem;
+    min-width: 36px;
+    text-align: right;
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">Route<span>IQ</span></div>
+      <div class="logo-tag">Ops Intelligence Platform</div>
+    </div>
+
+    <div class="sidebar-section">Navigation</div>
+    <nav class="sidebar-nav">
+      <div class="nav-item active" onclick="switchTab('overview')">
+        <span class="icon">⚡</span> Overview
+      </div>
+      <div class="nav-item" onclick="switchTab('geo')">
+        <span class="icon">🗺</span> Geo Intelligence
+      </div>
+      <div class="nav-item" onclick="switchTab('riders')">
+        <span class="icon">🏍</span> Rider Analytics
+      </div>
+      <div class="nav-item" onclick="switchTab('stores')">
+        <span class="icon">🏭</span> Dark Store Ops
+      </div>
+      <div class="nav-item" onclick="switchTab('sla')">
+        <span class="icon">🔴</span> SLA Monitor
+      </div>
+      <div class="nav-item" onclick="switchTab('models')">
+        <span class="icon">🤖</span> ML Models
+      </div>
+      <div class="nav-item" onclick="switchTab('recs')">
+        <span class="icon">💡</span> Recommendations
+      </div>
+    </nav>
+
+    <div class="sidebar-filter">
+      <div class="filter-label">City Filter</div>
+      <select class="filter-select" id="cityFilter" onchange="applyFilter()">
+        <option>All Cities</option>
+        <option>Mumbai</option>
+        <option>Delhi</option>
+        <option>Bengaluru</option>
+        <option>Hyderabad</option>
+        <option>Chennai</option>
+        <option>Pune</option>
+        <option>Ahmedabad</option>
+        <option>Kolkata</option>
+      </select>
+      <div class="filter-label">Date Range</div>
+      <select class="filter-select">
+        <option>Last 30 Days</option>
+        <option>Last 90 Days</option>
+        <option>Last 6 Months</option>
+        <option>All Time</option>
+      </select>
+    </div>
+
+    <div class="model-status">
+      <div class="filter-label">Model Status</div>
+      <div class="model-row"><span>Late Delivery</span><span class="model-badge">93.8%</span></div>
+      <div class="model-row"><span>SLA Breach</span><span class="model-badge">95.8%</span></div>
+      <div class="model-row"><span>Delay Est.</span><span class="model-badge">R²=0.885</span></div>
+      <div class="model-row"><span>Congestion</span><span class="model-badge">99.9%</span></div>
+    </div>
+  </aside>
+
+  <!-- ── Main ── -->
+  <div class="main">
+
+    <!-- Header -->
+    <div class="header">
+      <div class="header-left">
+        <div class="header-title">Last-Mile Delivery Operations Intelligence</div>
+        <div class="header-sub">50,000 orders · Jan 2023 – Jun 2024 · 8 cities · 500 riders · 16 dark stores</div>
+      </div>
+      <div class="header-right">
+        <div class="live-badge">
+          <div class="live-dot"></div>
+          LIVE FEED
+        </div>
+        <div class="header-stat">
+          <strong>50,000</strong>
+          Orders Analysed
+        </div>
+        <div class="header-stat">
+          <strong>₹49.0</strong>
+          Avg Cost / Order
+        </div>
+        <div class="header-stat">
+          <strong>93.8%</strong>
+          Model Accuracy
+        </div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+
+      <!-- ─────────── OVERVIEW TAB ─────────── -->
+      <div class="tab-panel active" id="tab-overview">
+
+        <div class="section-label">
+          <span>Operational KPI Overview — All Cities</span>
+          <span>Realtime · Updated 2s ago</span>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="kpi-card c-green" style="animation-delay:0s">
+            <div class="kpi-icon">✅</div>
+            <div class="kpi-label">On-Time Rate</div>
+            <div class="kpi-value">75.4%</div>
+            <div class="kpi-sub">SLA target ≥88%</div>
+            <div class="kpi-delta delta-bad">↓ vs 80% target</div>
+          </div>
+          <div class="kpi-card c-blue" style="animation-delay:.05s">
+            <div class="kpi-icon">⏱</div>
+            <div class="kpi-label">Avg Delivery</div>
+            <div class="kpi-value">31.7m</div>
+            <div class="kpi-sub">End-to-end time</div>
+            <div class="kpi-delta delta-good">↓ 0.8m WoW</div>
+          </div>
+          <div class="kpi-card c-red" style="animation-delay:.1s">
+            <div class="kpi-icon">🔴</div>
+            <div class="kpi-label">SLA Breach</div>
+            <div class="kpi-value">24.6%</div>
+            <div class="kpi-sub">Threshold: 10%</div>
+            <div class="kpi-delta delta-bad">CRITICAL</div>
+          </div>
+          <div class="kpi-card c-amber" style="animation-delay:.15s">
+            <div class="kpi-icon">🏍</div>
+            <div class="kpi-label">Rider Util.</div>
+            <div class="kpi-value">74.2%</div>
+            <div class="kpi-sub">Target: 75%</div>
+            <div class="kpi-delta delta-warn">Near target</div>
+          </div>
+          <div class="kpi-card c-muted" style="animation-delay:.2s">
+            <div class="kpi-icon">💰</div>
+            <div class="kpi-label">Cost/Order</div>
+            <div class="kpi-value">₹49</div>
+            <div class="kpi-sub">Incl. surge & ops</div>
+            <div class="kpi-delta delta-bad">↑ ₹1.2 WoW</div>
+          </div>
+          <div class="kpi-card c-blue" style="animation-delay:.25s">
+            <div class="kpi-icon">📦</div>
+            <div class="kpi-label">Throughput</div>
+            <div class="kpi-value">~91</div>
+            <div class="kpi-sub">Orders / day</div>
+            <div class="kpi-delta delta-good">↑ 3.8% MoM</div>
+          </div>
+          <div class="kpi-card c-orange" style="animation-delay:.3s">
+            <div class="kpi-icon">🚦</div>
+            <div class="kpi-label">Congestion ×</div>
+            <div class="kpi-value">1.66×</div>
+            <div class="kpi-sub">Speed impact</div>
+            <div class="kpi-delta delta-bad">HIGH</div>
+          </div>
+        </div>
+
+        <!-- Row 2 KPIs -->
+        <div class="kpi-grid" style="margin-bottom:1.2rem;">
+          <div class="kpi-card c-orange" style="animation-delay:.35s">
+            <div class="kpi-label">Peak Stress</div>
+            <div class="kpi-value">1.59×</div>
+            <div class="kpi-sub">vs. off-peak vol</div>
+          </div>
+          <div class="kpi-card c-blue" style="animation-delay:.4s">
+            <div class="kpi-label">Fulfillment Lag</div>
+            <div class="kpi-value">10.2m</div>
+            <div class="kpi-sub">Prep + dispatch</div>
+          </div>
+          <div class="kpi-card c-red" style="animation-delay:.45s">
+            <div class="kpi-label">Route Ineff.</div>
+            <div class="kpi-value">1.248</div>
+            <div class="kpi-sub">Optimal = 1.000</div>
+          </div>
+          <div class="kpi-card c-amber" style="animation-delay:.5s">
+            <div class="kpi-label">Weather Impact</div>
+            <div class="kpi-value">23.6%</div>
+            <div class="kpi-sub">Orders impacted</div>
+          </div>
+          <div class="kpi-card c-green" style="animation-delay:.55s">
+            <div class="kpi-label">DS Utilization</div>
+            <div class="kpi-value">68.3%</div>
+            <div class="kpi-sub">Capacity usage</div>
+          </div>
+          <div class="kpi-card c-blue" style="animation-delay:.6s">
+            <div class="kpi-label">Avg Delay (late)</div>
+            <div class="kpi-value">14.8m</div>
+            <div class="kpi-sub">Late orders only</div>
+          </div>
+          <div class="kpi-card c-purple" style="animation-delay:.65s">
+            <div class="kpi-label">Avg Rating</div>
+            <div class="kpi-value">3.9★</div>
+            <div class="kpi-sub">Customer score</div>
+          </div>
+        </div>
+
+        <div class="charts-row charts-21">
+          <!-- Daily trend -->
+          <div class="chart-card">
+            <div class="chart-header">
+              <div class="chart-title">📈 Daily Order Volume &amp; Late Rate (Last 30 Days)</div>
+              <div class="chart-badge">All Cities</div>
+            </div>
+            <div class="chart-canvas-wrap">
+              <canvas id="dailyChart" height="170"></canvas>
+            </div>
+          </div>
+
+          <!-- Order type -->
+          <div class="chart-card">
+            <div class="chart-header">
+              <div class="chart-title">📊 Order Type Mix</div>
+              <div class="chart-badge">Breakdown</div>
+            </div>
+            <div class="chart-canvas-wrap">
+              <canvas id="typeChart" height="170"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <div class="charts-row charts-2">
+          <!-- Hourly demand -->
+          <div class="chart-card">
+            <div class="chart-header">
+              <div class="chart-title">🕐 Hourly Demand Pattern</div>
+              <div class="chart-badge">Avg All Cities</div>
+            </div>
+            <canvas id="hourlyChart" height="160"></canvas>
+          </div>
+
+          <!-- City late rate -->
+          <div class="chart-card">
+            <div class="chart-header">
+              <div class="chart-title">🏙 Late Rate by City</div>
+              <div class="chart-badge">% of Orders</div>
+            </div>
+            <ul class="city-list" id="cityLateList"></ul>
+          </div>
+        </div>
+
+      </div><!-- /overview -->
+
+      <!-- ─────────── GEO TAB ─────────── -->
+      <div class="tab-panel" id="tab-geo">
+        <div class="section-label"><span>Geospatial Intelligence — Delivery Density &amp; Late-Rate Zones</span></div>
+        <div class="charts-row charts-2">
+          <div class="chart-card">
+            <div class="chart-header">
+              <div class="chart-title">📍 Delivery Volume by Zone (Simulated)</div>
+              <div class="chart-badge">Hexbin grid</div>
+            </div>
+            <canvas id="geoChart" height="280"></canvas>
+          </div>
+          <div class="chart-card">
+            <div class="chart-header">
+              <div class="chart-title">🔴 Top Late-Rate Zones</div>
+              <div class="chart-badge">Highest breach</div>
+            </div>
+            <table class="data-table">
+              <thead><tr>
+                <th>#</th><th>Zone (lat/lon)</th><th>Orders</th><th>Late Rate</th><th>Status</th>
+              </tr></thead>
+              <tbody id="lateZoneTable"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="chart-card" style="margin-top:0.8rem">
+          <div class="chart-header">
+            <div class="chart-title">🗺 Delivery Cluster Centers (K-Means, k=8)</div>
+            <div class="chart-badge">Zone analysis</div>
+          </div>
+          <canvas id="clusterChart" height="160"></canvas>
+        </div>
+      </div>
+
+      <!-- ─────────── RIDERS TAB ─────────── -->
+      <div class="tab-panel" id="tab-riders">
+        <div class="section-label"><span>Rider Performance Analytics</span></div>
+        <div class="charts-row charts-3">
+          <div class="chart-card">
+            <div class="chart-header"><div class="chart-title">🏅 Utilization Distribution</div></div>
+            <canvas id="riderUtil" height="200"></canvas>
+          </div>
+          <div class="chart-card">
+            <div class="chart-header"><div class="chart-title">⚡ Late Rate by Experience</div></div>
+            <canvas id="riderExp" height="200"></canvas>
+          </div>
+          <div class="chart-card">
+            <div class="chart-header"><div class="chart-title">🚗 Vehicle Type Mix</div></div>
+            <canvas id="vehicleChart" height="200"></canvas>
+          </div>
+        </div>
+        <div class="chart-card">
+          <div class="chart-header">
+            <div class="chart-title">🗂 Top Riders by Volume (simulated sample)</div>
+            <div class="chart-badge">Performance table</div>
+          </div>
+          <table class="data-table">
+            <thead><tr>
+              <th>Rider ID</th><th>City</th><th>Deliveries</th><th>Late Rate</th><th>Avg Time</th><th>Rating</th><th>Util%</th><th>Status</th>
+            </tr></thead>
+            <tbody id="riderTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ─────────── STORES TAB ─────────── -->
+      <div class="tab-panel" id="tab-stores">
+        <div class="section-label"><span>Dark Store Operations — Capacity &amp; Load Analysis</span></div>
+        <div class="charts-row charts-2">
+          <div class="chart-card">
+            <div class="chart-header"><div class="chart-title">🏭 Store Order Volume &amp; SLA Breach</div></div>
+            <canvas id="storeChart" height="220"></canvas>
+          </div>
+          <div class="chart-card">
+            <div class="chart-header"><div class="chart-title">⏱ Avg Prep Time by Tier</div></div>
+            <canvas id="tierChart" height="220"></canvas>
+          </div>
+        </div>
+        <div class="chart-card" style="margin-top:0.8rem">
+          <div class="chart-header"><div class="chart-title">📋 Dark Store Performance Summary</div></div>
+          <table class="data-table">
+            <thead><tr>
+              <th>Store ID</th><th>City</th><th>Tier</th><th>Orders</th><th>SLA Breach%</th><th>Avg Prep (min)</th><th>Capacity Util%</th><th>Status</th>
+            </tr></thead>
+            <tbody id="storeTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ─────────── SLA TAB ─────────── -->
+      <div class="tab-panel" id="tab-sla">
+        <div class="section-label"><span>SLA Monitoring — Breach Detection &amp; Delay Analysis</span></div>
+        <div class="charts-row charts-2">
+          <div class="chart-card">
+            <div class="chart-header"><div class="chart-title">🔴 SLA Breach Rate Trend</div><div class="chart-badge">30-day window</div></div>
+            <canvas id="slaChart" height="200"></canvas>
+          </div>
+          <div class="chart-card">
+            <div class="chart-header"><div class="chart-title">📦 Breach Rate by Order Type</div></div>
+            <canvas id="slaTypeChart" height="200"></canvas>
+          </div>
+        </div>
+        <div class="chart-card" style="margin-top:0.8rem">
+          <div class="chart-header"><div class="chart-title">📉 Delay Distribution (Late Orders)</div></div>
+          <canvas id="delayDist" height="130"></canvas>
+        </div>
+      </div>
+
+      <!-- ─────────── MODELS TAB ─────────── -->
+      <div class="tab-panel" id="tab-models">
+        <div class="section-label"><span>Predictive Model Performance — Trained on 40,000 orders</span></div>
+        <div class="model-grid">
+          <div class="model-card">
+            <div class="model-name">Late Delivery Classifier</div>
+            <div class="model-score">93.8%</div>
+            <div class="model-meta">XGBoost · ROC-AUC: 0.958<br>Precision: 90.8% · Recall: 83.3%<br>F1: 86.9%</div>
+          </div>
+          <div class="model-card">
+            <div class="model-name">SLA Breach Probability</div>
+            <div class="model-score">95.8%</div>
+            <div class="model-meta">Random Forest · AUC: 0.986<br>n_estimators: 300 · max_depth: 8</div>
+          </div>
+          <div class="model-card">
+            <div class="model-name">Delay Estimator (Regressor)</div>
+            <div class="model-score" style="color:var(--primary)">0.885</div>
+            <div class="model-meta">R² Score · MAE: 3.31 min<br>Random Forest Regressor</div>
+          </div>
+          <div class="model-card">
+            <div class="model-name">Congestion Risk Scorer</div>
+            <div class="model-score" style="color:var(--accent)">99.9%</div>
+            <div class="model-meta">XGBoost · AUC: 1.000<br>Congestion factor > 1.5×</div>
+          </div>
+        </div>
+        <div class="charts-row charts-2">
+          <div class="chart-card">
+            <div class="chart-header"><div class="chart-title">🔍 Feature Importance — Late Delivery Model</div></div>
+            <canvas id="featureChart" height="220"></canvas>
+          </div>
+          <div class="chart-card">
+            <div class="chart-header"><div class="chart-title">🎯 Risk Score Distribution</div></div>
+            <canvas id="riskChart" height="220"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─────────── RECS TAB ─────────── -->
+      <div class="tab-panel" id="tab-recs">
+        <div class="section-label">
+          <span>Operational Recommendations Engine — 5 recommendations generated</span>
+          <span>Based on live KPI analysis</span>
+        </div>
+
+        <div class="alert-box alert-critical">
+          <div class="alert-head">🔴 SLA Breach Rate Critical (24.6%)</div>
+          <div class="alert-body">SLA breach rate has exceeded 15% across all cities. Immediate intervention required: activate surge fleet, notify ops managers, and temporarily suspend new order acceptance from overloaded dark stores. Express orders are the primary driver (47% late rate vs 7.5% for standard).</div>
+          <div class="alert-meta">
+            <span>📂 SLA Management</span>
+            <span>🔺 Impact: HIGH</span>
+            <span>📈 Est. improvement: Reduce breach by 4–7%</span>
+          </div>
+        </div>
+
+        <div class="alert-box alert-high">
+          <div class="alert-head">🚦 Congestion Critical — Enable Time-Shift Dispatching</div>
+          <div class="alert-body">Congestion factor averaging 1.66× normal speed across the network. Activate congestion-aware routing API immediately. For orders with SLA &gt; 45 min, dispatch 10–15 min earlier than standard window. Flag top congestion corridors for rider notifications before dispatch assignment.</div>
+          <div class="alert-meta">
+            <span>📂 Congestion Management</span>
+            <span>🔺 Impact: HIGH</span>
+            <span>📈 Est. improvement: Reduce congestion delays by 25%</span>
+          </div>
+        </div>
+
+        <div class="alert-box alert-high">
+          <div class="alert-head">🌧 Weather Disruption Elevated (23.6%) — Activate Contingency</div>
+          <div class="alert-body">Over 23% of orders are experiencing weather-related delays. Trigger automated SLA extension notifications (+15 min buffer) for all active orders. Alert riders in affected zones via app push. Enable customer ETA re-push with weather advisory for orders created in the next 2 hours.</div>
+          <div class="alert-meta">
+            <span>📂 Weather Response</span>
+            <span>🟡 Impact: MEDIUM</span>
+            <span>📈 Est. improvement: Reduce weather complaints by 40%</span>
+          </div>
+        </div>
+
+        <div class="alert-box alert-medium">
+          <div class="alert-head">🗺 Route Inefficiency — Restructure Delivery Polygons</div>
+          <div class="alert-body">Average route efficiency score at 1.248 (optimal = 1.0), meaning riders are travelling 24.8% more distance than necessary. Recommend switching from static delivery zones to dynamic clustering using real-time GPS density. Estimated 15% reduction in travel distance by restructuring delivery polygons in high-inefficiency zones.</div>
+          <div class="alert-meta">
+            <span>📂 Route Optimization</span>
+            <span>🟡 Impact: MEDIUM</span>
+            <span>📈 Est. improvement: Reduce avg travel time by 4–6 min</span>
+          </div>
+        </div>
+
+        <div class="alert-box alert-medium">
+          <div class="alert-head">⚡ Peak Hour Surge — Pre-Position Fleet (11:30 AM &amp; 6:30 PM)</div>
+          <div class="alert-body">Peak-to-off-peak order ratio is 1.59×, with lunch (11–14h) and dinner (18–21h) generating 3× off-peak demand. Pre-position 30% of afternoon shift riders in top-demand hexagons 30 minutes before lunch and dinner windows. Use predictive heat-maps for zone pre-staging based on last 7-day demand patterns.</div>
+          <div class="alert-meta">
+            <span>📂 Peak Hour Management</span>
+            <span>🟡 Impact: MEDIUM</span>
+            <span>📈 Est. improvement: Reduce peak-hour late rate by 15%</span>
+          </div>
+        </div>
+
+        <!-- Health radar mock -->
+        <div class="chart-card" style="margin-top:1rem">
+          <div class="chart-header">
+            <div class="chart-title">🎯 Operational Health Matrix</div>
+            <div class="chart-badge">Current vs Target</div>
+          </div>
+          <canvas id="radarChart" height="200"></canvas>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+// ─── Data ─────────────────────────────────────────────────────────────────────
+const DATA = {
+  hourly: [457,462,425,404,444,424,1489,1387,2172,2300,1498,4213,4077,4135,1806,1646,1709,1415,4676,4580,4599,2628,2620,434],
+  cityLR: [
+    {city:'Mumbai',lr:25.1,orders:11103},
+    {city:'Delhi',lr:24.4,orders:9945},
+    {city:'Bengaluru',lr:24.7,orders:8907},
+    {city:'Hyderabad',lr:24.1,orders:6013},
+    {city:'Chennai',lr:24.6,orders:4925},
+    {city:'Pune',lr:24.5,orders:4021},
+    {city:'Ahmedabad',lr:25.0,orders:3028},
+    {city:'Kolkata',lr:24.3,orders:2058},
+  ],
+  daily: {
+    dates:['May-31','Jun-01','Jun-02','Jun-03','Jun-04','Jun-05','Jun-06','Jun-07','Jun-08','Jun-09','Jun-10','Jun-11','Jun-12','Jun-13','Jun-14','Jun-15','Jun-16','Jun-17','Jun-18','Jun-19','Jun-20','Jun-21','Jun-22','Jun-23','Jun-24','Jun-25','Jun-26','Jun-27','Jun-28','Jun-29'],
+    orders:[90,107,78,95,75,88,129,86,109,111,92,92,91,69,124,80,82,56,91,95,78,70,96,87,78,85,90,77,81,91],
+    late:[17.8,33.6,24.1,27.4,50.4,33.6,48.1,42.0,50.0,43.7,33.9,20.7,35.3,39.8,37.3,38.3,37.0,29.7,28.8,44.5,28.6,36.3,34.2,36.2,21.7,25.2,32.2,31.2,39.7,24.7]
+  },
+  features: ['is_express','is_high_distance','sla_minutes','weather_delay_min','delivery_distance_km','prep_time_min','late_risk_score','is_peak_hour','congestion_factor','month'],
+  featureImp: [0.375,0.165,0.133,0.096,0.052,0.031,0.019,0.016,0.014,0.011],
+};
+
+const COLORS = {
+  blue:'#0EA5E9', green:'#10B981', red:'#EF4444',
+  amber:'#F59E0B', orange:'#F97316', purple:'#8B5CF6',
+  muted:'#5A7494', bg:'rgba(0,0,0,0)', grid:'#1C2E44', text:'#5A7494'
+};
+
+Chart.defaults.color = COLORS.text;
+Chart.defaults.font.family = "'DM Sans', sans-serif";
+Chart.defaults.font.size = 11;
+
+function mkChart(id, cfg) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  return new Chart(el, cfg);
+}
+
+// ─── Tab switching ─────────────────────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.textContent.trim().toLowerCase().includes(name.slice(0,4))) {
+      n.classList.add('active');
+    }
+  });
+  renderTabCharts(name);
+}
+
+function applyFilter() {
+  const city = document.getElementById('cityFilter').value;
+  // In full Streamlit app this re-filters all data; here shows message
+  console.log('Filter:', city);
+}
+
+// ─── Charts ───────────────────────────────────────────────────────────────────
+const chartInstances = {};
+
+function renderOverview() {
+  if (chartInstances['daily']) return; // already rendered
+
+  // Daily trend (bar + line combo)
+  chartInstances['daily'] = mkChart('dailyChart', {
+    type: 'bar',
+    data: {
+      labels: DATA.daily.dates,
+      datasets: [
+        {
+          type: 'bar',
+          label: 'Orders',
+          data: DATA.daily.orders,
+          backgroundColor: COLORS.blue + '60',
+          borderColor: COLORS.blue,
+          borderWidth: 1,
+          yAxisID: 'y',
+        },
+        {
+          type: 'line',
+          label: 'Late Rate %',
+          data: DATA.daily.late,
+          borderColor: COLORS.red,
+          backgroundColor: COLORS.red + '15',
+          borderWidth: 2,
+          pointRadius: 2,
+          fill: false,
+          tension: 0.3,
+          yAxisID: 'y1',
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { labels: { boxWidth: 10, font: { size: 10 } } } },
+      scales: {
+        x: { grid: { color: COLORS.grid }, ticks: { maxTicksLimit: 10 } },
+        y: { grid: { color: COLORS.grid }, title: { display: true, text: 'Orders' } },
+        y1: { position: 'right', grid: { display: false }, title: { display: true, text: 'Late %' } }
+      }
+    }
+  });
+
+  // Order type donut
+  chartInstances['type'] = mkChart('typeChart', {
+    type: 'doughnut',
+    data: {
+      labels: ['Express', 'Standard', 'Scheduled'],
+      datasets: [{
+        data: [22541, 21003, 6456],
+        backgroundColor: [COLORS.blue + 'cc', COLORS.amber + 'cc', COLORS.green + 'cc'],
+        borderColor: ['#080C14'],
+        borderWidth: 3,
+        hoverOffset: 6,
+      }]
+    },
+    options: {
+      cutout: '62%',
+      plugins: {
+        legend: { position: 'right', labels: { boxWidth: 10, padding: 12 } },
+        tooltip: {
+          callbacks: {
+            label: ctx => ` ${ctx.label}: ${ctx.formattedValue} (${((ctx.raw/50000)*100).toFixed(1)}%)`
+          }
+        }
+      }
+    }
+  });
+
+  // Hourly bar
+  const isPeak = (h) => (h >= 11 && h <= 13) || (h >= 18 && h <= 20);
+  chartInstances['hourly'] = mkChart('hourlyChart', {
+    type: 'bar',
+    data: {
+      labels: Array.from({length:24}, (_,i) => `${String(i).padStart(2,'0')}:00`),
+      datasets: [{
+        data: DATA.hourly,
+        backgroundColor: DATA.hourly.map((_,i) => isPeak(i) ? COLORS.orange + 'bb' : COLORS.blue + '70'),
+        borderColor: DATA.hourly.map((_,i) => isPeak(i) ? COLORS.orange : COLORS.blue),
+        borderWidth: 1,
+        borderRadius: 2,
+      }]
+    },
+    options: {
+      plugins: { legend: { display: false }, tooltip: { callbacks: { label: ctx => ` ${ctx.raw.toLocaleString()} orders` } } },
+      scales: {
+        x: { grid: { color: COLORS.grid }, ticks: { maxTicksLimit: 12 } },
+        y: { grid: { color: COLORS.grid } }
+      }
+    }
+  });
+
+  // City late rate list
+  const list = document.getElementById('cityLateList');
+  if (list) {
+    const maxOrders = Math.max(...DATA.cityLR.map(c => c.orders));
+    list.innerHTML = DATA.cityLR.map(c => `
+      <li class="city-row">
+        <span class="city-name">${c.city}</span>
+        <div class="city-bar-wrap">
+          <div class="city-bar-bg">
+            <div class="city-bar-fill" style="width:${(c.orders/maxOrders*100).toFixed(0)}%"></div>
+          </div>
+        </div>
+        <span class="city-pct" style="color:${c.lr > 25 ? COLORS.red : c.lr > 20 ? COLORS.orange : COLORS.green}">${c.lr}%</span>
+      </li>`).join('');
+  }
+}
+
+function renderGeo() {
+  if (chartInstances['geo']) return;
+
+  // Simulated zone density as bubble chart
+  const zones = [];
+  const cities = [{lat:19.07,lon:72.87},{lat:28.70,lon:77.10},{lat:12.97,lon:77.59},{lat:17.38,lon:78.48}];
+  for(let i=0;i<40;i++){
+    const c = cities[i%4];
+    zones.push({
+      x: c.lon + (Math.random()-0.5)*0.3,
+      y: c.lat + (Math.random()-0.5)*0.3,
+      r: Math.random()*15+3,
+      late: Math.random()*0.4+0.1
+    });
+  }
+  chartInstances['geo'] = mkChart('geoChart', {
+    type: 'bubble',
+    data: {
+      datasets: [{
+        label: 'Delivery zones',
+        data: zones.map(z => ({x:z.x,y:z.y,r:z.r})),
+        backgroundColor: zones.map(z => z.late > 0.3 ? COLORS.red+'80' : z.late > 0.2 ? COLORS.amber+'80' : COLORS.blue+'80'),
+        borderColor: zones.map(z => z.late > 0.3 ? COLORS.red : z.late > 0.2 ? COLORS.amber : COLORS.blue),
+        borderWidth: 1,
+      }]
+    },
+    options: {
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { grid:{color:COLORS.grid}, title:{display:true,text:'Longitude'} },
+        y: { grid:{color:COLORS.grid}, title:{display:true,text:'Latitude'} }
+      }
+    }
+  });
+
+  // Late zone table
+  const tbody = document.getElementById('lateZoneTable');
+  if (tbody) {
+    const mockZones = [
+      ['19.05°N / 72.85°E',342,38.4,'CRITICAL'],
+      ['28.71°N / 77.11°E',289,36.1,'CRITICAL'],
+      ['12.95°N / 77.57°E',267,33.8,'HIGH'],
+      ['17.39°N / 78.50°E',198,31.2,'HIGH'],
+      ['18.52°N / 73.86°E',176,28.9,'HIGH'],
+      ['22.57°N / 88.37°E',143,27.4,'WARN'],
+      ['23.02°N / 72.58°E',132,25.1,'WARN'],
+      ['13.08°N / 80.27°E',121,23.8,'WARN'],
+    ];
+    tbody.innerHTML = mockZones.map(([z,o,l,s],i) => `
+      <tr>
+        <td style="color:var(--muted)">${i+1}</td>
+        <td style="font-family:'IBM Plex Mono',monospace;font-size:0.72rem">${z}</td>
+        <td>${o.toLocaleString()}</td>
+        <td style="color:${l>35?COLORS.red:l>28?COLORS.orange:COLORS.amber};font-weight:600">${l}%</td>
+        <td><span class="${l>35?'badge-bad':l>28?'badge-warn':'badge-warn'}">${s}</span></td>
+      </tr>`).join('');
+  }
+
+  // Cluster scatter
+  const clusters = Array.from({length:8}, (_,i) => ({
+    x: 72.5 + Math.random()*16,
+    y: 12.9 + Math.random()*16,
+    r: Math.random()*10+5,
+    n: Math.floor(Math.random()*1000+200)
+  }));
+  chartInstances['cluster'] = mkChart('clusterChart', {
+    type: 'bubble',
+    data: {
+      datasets: [{
+        label: 'Cluster centers',
+        data: clusters.map(c => ({x:c.x,y:c.y,r:c.r})),
+        backgroundColor: [COLORS.blue,COLORS.green,COLORS.amber,COLORS.red,COLORS.purple,COLORS.orange,COLORS.blue,COLORS.green].map(c=>c+'99'),
+        borderColor: [COLORS.blue,COLORS.green,COLORS.amber,COLORS.red,COLORS.purple,COLORS.orange,COLORS.blue,COLORS.green],
+        borderWidth: 2,
+      }]
+    },
+    options: {
+      plugins: { legend:{display:false}, tooltip:{callbacks:{label:ctx=>`Cluster ${ctx.dataIndex+1} — ${clusters[ctx.dataIndex].n} orders`}} },
+      scales: {
+        x:{grid:{color:COLORS.grid},title:{display:true,text:'Longitude'}},
+        y:{grid:{color:COLORS.grid},title:{display:true,text:'Latitude'}}
+      }
+    }
+  });
+}
+
+function renderRiders() {
+  if (chartInstances['riderUtil']) return;
+  const util = Array.from({length:30}, () => Math.random()*60+30);
+  chartInstances['riderUtil'] = mkChart('riderUtil', {
+    type:'bar', data:{
+      labels: util.map((_,i)=>`${(i/30*100).toFixed(0)}%`),
+      datasets:[{data:util,backgroundColor:COLORS.blue+'70',borderRadius:2}]
+    },
+    options:{plugins:{legend:{display:false}},scales:{x:{grid:{color:COLORS.grid},ticks:{maxTicksLimit:6}},y:{grid:{color:COLORS.grid}}}}
+  });
+
+  chartInstances['riderExp'] = mkChart('riderExp', {
+    type:'line',
+    data:{
+      labels:['0-6m','6-12m','1-2y','2-3y','3-5y'],
+      datasets:[{
+        label:'Late Rate %',
+        data:[38,30,22,18,14],
+        borderColor:COLORS.orange,backgroundColor:COLORS.orange+'20',
+        fill:true,tension:0.4,borderWidth:2,pointRadius:4
+      }]
+    },
+    options:{plugins:{legend:{display:false}},scales:{x:{grid:{color:COLORS.grid}},y:{grid:{color:COLORS.grid},title:{display:true,text:'Late Rate %'}}}}
+  });
+
+  chartInstances['vehicle'] = mkChart('vehicleChart', {
+    type:'doughnut',
+    data:{
+      labels:['2W-Petrol','2W-EV','Cycle','3W-EV'],
+      datasets:[{
+        data:[55,25,10,10],
+        backgroundColor:[COLORS.blue+'cc',COLORS.green+'cc',COLORS.amber+'cc',COLORS.purple+'cc'],
+        borderColor:'#080C14',borderWidth:3,hoverOffset:4
+      }]
+    },
+    options:{cutout:'60%',plugins:{legend:{position:'right',labels:{boxWidth:10,font:{size:10}}}}}
+  });
+
+  // Rider table
+  const tbody = document.getElementById('riderTable');
+  if (tbody) {
+    const riders = Array.from({length:12}, (_,i) => ({
+      id: `R${String(100001+i).slice(1)}`,
+      city: ['Mumbai','Delhi','Bengaluru','Hyderabad','Chennai','Pune'][i%6],
+      del: Math.floor(Math.random()*200+50),
+      late: (Math.random()*30+5).toFixed(1),
+      time: (Math.random()*15+25).toFixed(1),
+      rating: (Math.random()*1.5+3.5).toFixed(1),
+      util: (Math.random()*40+50).toFixed(0),
+    }));
+    tbody.innerHTML = riders.map(r => {
+      const lc = parseFloat(r.late);
+      const badge = lc>25?'badge-bad':lc>15?'badge-warn':'badge-ok';
+      const label = lc>25?'POOR':lc>15?'WATCH':'GOOD';
+      return `<tr>
+        <td style="font-family:'IBM Plex Mono',monospace;font-size:0.72rem">${r.id}</td>
+        <td>${r.city}</td><td>${r.del}</td>
+        <td style="color:${lc>25?COLORS.red:lc>15?COLORS.orange:COLORS.green}">${r.late}%</td>
+        <td>${r.time} min</td><td>⭐ ${r.rating}</td><td>${r.util}%</td>
+        <td><span class="${badge}">${label}</span></td>
+      </tr>`;
+    }).join('');
+  }
+}
+
+function renderStores() {
+  if (chartInstances['store']) return;
+  const stores = ['DS0001','DS0002','DS0003','DS0004','DS0005','DS0006'];
+  const orders = [4200,3800,3500,3100,2800,2400];
+  const breach = [28,22,18,24,16,20];
+
+  chartInstances['store'] = mkChart('storeChart', {
+    type:'bar',
+    data:{
+      labels:stores,
+      datasets:[
+        {type:'bar',label:'Orders',data:orders,backgroundColor:COLORS.blue+'70',yAxisID:'y'},
+        {type:'line',label:'SLA Breach%',data:breach,borderColor:COLORS.red,backgroundColor:COLORS.red+'10',borderWidth:2,pointRadius:3,yAxisID:'y1',fill:false}
+      ]
+    },
+    options:{
+      interaction:{mode:'index'},
+      plugins:{legend:{labels:{boxWidth:10,font:{size:10}}}},
+      scales:{
+        x:{grid:{color:COLORS.grid}},
+        y:{grid:{color:COLORS.grid},title:{display:true,text:'Orders'}},
+        y1:{position:'right',grid:{display:false},title:{display:true,text:'Breach%'}}
+      }
+    }
+  });
+
+  chartInstances['tier'] = mkChart('tierChart', {
+    type:'bar',
+    data:{
+      labels:['Tier-1','Tier-2','Tier-3'],
+      datasets:[{data:[8.2,10.5,14.1],backgroundColor:[COLORS.green+'bb',COLORS.amber+'bb',COLORS.red+'bb'],borderRadius:4}]
+    },
+    options:{
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.raw} min avg prep time`}}},
+      scales:{x:{grid:{color:COLORS.grid}},y:{grid:{color:COLORS.grid},title:{display:true,text:'Avg Prep Time (min)'}}}
+    }
+  });
+
+  const tbody = document.getElementById('storeTable');
+  if (tbody) {
+    const data = [
+      ['DS0001','Mumbai','Tier-1',4200,28.1,8.2,71],
+      ['DS0002','Delhi','Tier-1',3800,22.4,8.5,65],
+      ['DS0003','Bengaluru','Tier-2',3500,18.3,10.2,58],
+      ['DS0004','Delhi','Tier-2',3100,24.0,10.8,62],
+      ['DS0005','Hyderabad','Tier-3',2800,16.2,14.4,48],
+      ['DS0006','Mumbai','Tier-2',2400,20.5,9.8,55],
+      ['DS0007','Chennai','Tier-3',2100,15.8,13.9,44],
+      ['DS0008','Pune','Tier-1',1900,12.3,7.9,38],
+    ];
+    tbody.innerHTML = data.map(([id,city,tier,orders,breach,prep,util]) => {
+      const bc = parseFloat(breach);
+      const badge = bc>25?'badge-bad':bc>18?'badge-warn':'badge-ok';
+      return `<tr>
+        <td style="font-family:'IBM Plex Mono',monospace;font-size:0.72rem">${id}</td>
+        <td>${city}</td><td>${tier}</td><td>${orders.toLocaleString()}</td>
+        <td style="color:${bc>25?COLORS.red:bc>18?COLORS.orange:COLORS.green};font-weight:600">${breach}%</td>
+        <td>${prep} min</td><td>${util}%</td>
+        <td><span class="${badge}">${bc>25?'OVERLOAD':bc>18?'WATCH':'OK'}</span></td>
+      </tr>`;
+    }).join('');
+  }
+}
+
+function renderSLA() {
+  if (chartInstances['sla']) return;
+  chartInstances['sla'] = mkChart('slaChart', {
+    type:'line',
+    data:{
+      labels: DATA.daily.dates,
+      datasets:[
+        {label:'Late Rate %',data:DATA.daily.late,borderColor:COLORS.blue,backgroundColor:COLORS.blue+'18',fill:true,tension:0.3,borderWidth:2,pointRadius:2},
+        {label:'10% Warning',data:Array(30).fill(10),borderColor:COLORS.amber,borderDash:[4,4],borderWidth:1.5,pointRadius:0,fill:false},
+        {label:'15% Critical',data:Array(30).fill(15),borderColor:COLORS.red,borderDash:[4,4],borderWidth:1.5,pointRadius:0,fill:false},
+      ]
+    },
+    options:{
+      plugins:{legend:{labels:{boxWidth:10,font:{size:10}}}},
+      scales:{x:{grid:{color:COLORS.grid},ticks:{maxTicksLimit:10}},y:{grid:{color:COLORS.grid},title:{display:true,text:'Late Rate (%)'}}}
+    }
+  });
+
+  chartInstances['slaType'] = mkChart('slaTypeChart', {
+    type:'bar',
+    data:{
+      labels:['Express','Standard','Scheduled'],
+      datasets:[{
+        data:[47.0,7.5,1.8],
+        backgroundColor:[COLORS.red+'cc',COLORS.amber+'cc',COLORS.green+'cc'],
+        borderRadius:5,
+      }]
+    },
+    options:{
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.raw}% breach rate`}}},
+      scales:{x:{grid:{color:COLORS.grid}},y:{grid:{color:COLORS.grid},title:{display:true,text:'SLA Breach Rate (%)'}}}
+    }
+  });
+
+  // Delay distribution
+  const bins = Array.from({length:20},(_,i)=>i*3);
+  const counts = [0,0,120,380,620,840,960,880,740,580,440,320,240,160,100,60,35,20,10,5];
+  chartInstances['delay'] = mkChart('delayDist', {
+    type:'bar',
+    data:{
+      labels:bins.map(b=>`${b}m`),
+      datasets:[{data:counts,backgroundColor:COLORS.red+'70',borderColor:COLORS.red,borderWidth:1,borderRadius:2}]
+    },
+    options:{
+      plugins:{legend:{display:false}},
+      scales:{x:{grid:{color:COLORS.grid}},y:{grid:{color:COLORS.grid},title:{display:true,text:'Orders'}}}
+    }
+  });
+}
+
+function renderModels() {
+  if (chartInstances['feat']) return;
+  chartInstances['feat'] = mkChart('featureChart', {
+    type:'bar',
+    data:{
+      labels: DATA.features.map(f=>f.replace(/_/g,' ')),
+      datasets:[{
+        data: DATA.featureImp,
+        backgroundColor: DATA.featureImp.map(v => {
+          const alpha = Math.floor(80+v*400).toString(16);
+          return COLORS.blue + alpha.slice(0,2);
+        }),
+        borderColor: COLORS.blue,
+        borderWidth: 1,
+        borderRadius: 3,
+        indexAxis:'y',
+      }]
+    },
+    options:{
+      indexAxis:'y',
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` Importance: ${(ctx.raw*100).toFixed(1)}%`}}},
+      scales:{x:{grid:{color:COLORS.grid},title:{display:true,text:'Importance Score'}},y:{grid:{color:COLORS.grid}}}
+    }
+  });
+
+  // Risk score distribution
+  const onTimeBuckets = [5,12,28,62,120,210,280,320,290,240,180,140,100,70,50,30,20,12,8,5];
+  const lateBuckets   = [0,0,2,5,12,30,60,100,145,180,210,240,260,240,200,160,120,80,50,30];
+  const labels = Array.from({length:20},(_,i)=>(i*0.08).toFixed(2));
+  chartInstances['risk'] = mkChart('riskChart', {
+    type:'bar',
+    data:{
+      labels,
+      datasets:[
+        {label:'On-Time',data:onTimeBuckets,backgroundColor:COLORS.green+'60',borderColor:COLORS.green,borderWidth:1,borderRadius:2},
+        {label:'Late',data:lateBuckets,backgroundColor:COLORS.red+'60',borderColor:COLORS.red,borderWidth:1,borderRadius:2},
+      ]
+    },
+    options:{
+      plugins:{legend:{labels:{boxWidth:10,font:{size:10}}}},
+      scales:{x:{grid:{color:COLORS.grid},title:{display:true,text:'Risk Score'}},y:{grid:{color:COLORS.grid},title:{display:true,text:'Orders'}}}
+    }
+  });
+}
+
+function renderRecs() {
+  if (chartInstances['radar']) return;
+  chartInstances['radar'] = mkChart('radarChart', {
+    type:'radar',
+    data:{
+      labels:['On-Time Rate','SLA Health','Rider Util.','Route Eff.','DS Capacity','Cost Eff.'],
+      datasets:[
+        {label:'Current',data:[75.4,75.4,74.2,60,68.3,72],borderColor:COLORS.blue,backgroundColor:COLORS.blue+'30',borderWidth:2,pointRadius:4,pointBackgroundColor:COLORS.blue},
+        {label:'Target',data:[88,90,75,80,70,80],borderColor:COLORS.green,backgroundColor:COLORS.green+'18',borderWidth:2,borderDash:[5,5],pointRadius:3,pointBackgroundColor:COLORS.green},
+      ]
+    },
+    options:{
+      plugins:{legend:{labels:{boxWidth:10,font:{size:10}}}},
+      scales:{r:{grid:{color:COLORS.grid},angleLines:{color:COLORS.grid},ticks:{display:false},min:0,max:100,pointLabels:{font:{size:11},color:COLORS.text}}}
+    }
+  });
+}
+
+const tabRenders = {
+  overview: renderOverview,
+  geo: renderGeo,
+  riders: renderRiders,
+  stores: renderStores,
+  sla: renderSLA,
+  models: renderModels,
+  recs: renderRecs,
+};
+
+function renderTabCharts(tab) {
+  if (tabRenders[tab]) tabRenders[tab]();
+}
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  renderOverview();
+
+  // Staggered KPI card animations
+  document.querySelectorAll('.kpi-card').forEach((el, i) => {
+    el.style.animationDelay = `${i * 0.04}s`;
+  });
+});
+</script>
+</body>
+</html>

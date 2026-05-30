@@ -1,0 +1,65 @@
+{
+  "late_delivery": {
+    "accuracy": 0.938,
+    "roc_auc": 0.958,
+    "precision": 0.9078,
+    "recall": 0.8326,
+    "f1": 0.8686,
+    "n_train": 40000,
+    "n_test": 10000,
+    "top_features": [
+      {
+        "feature": "is_express",
+        "importance": 0.3750804364681244
+      },
+      {
+        "feature": "is_high_distance",
+        "importance": 0.16490702331066132
+      },
+      {
+        "feature": "sla_minutes",
+        "importance": 0.1332484781742096
+      },
+      {
+        "feature": "weather_delay_min",
+        "importance": 0.09641705453395844
+      },
+      {
+        "feature": "delivery_distance_km",
+        "importance": 0.0524580143392086
+      },
+      {
+        "feature": "prep_time_min",
+        "importance": 0.031014151871204376
+      },
+      {
+        "feature": "late_risk_score",
+        "importance": 0.01911824196577072
+      },
+      {
+        "feature": "is_peak_hour",
+        "importance": 0.015771668404340744
+      },
+      {
+        "feature": "congestion_factor",
+        "importance": 0.014218579046428204
+      },
+      {
+        "feature": "month",
+        "importance": 0.011123956181108952
+      }
+    ]
+  },
+  "sla_breach": {
+    "accuracy": 0.9582,
+    "roc_auc": 0.9864
+  },
+  "delay_estimation": {
+    "mae_minutes": 3.31,
+    "r2": 0.8848
+  },
+  "congestion_risk": {
+    "accuracy": 0.9989,
+    "roc_auc": 1.0
+  }
+}

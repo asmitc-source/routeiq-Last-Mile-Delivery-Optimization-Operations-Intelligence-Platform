@@ -1,0 +1,27 @@
+# RouteIQ — Python Dependencies
+# Install with: pip install -r requirements.txt
+
+# Core data
+pandas>=2.0.0
+numpy>=1.24.0
+pyarrow>=12.0.0
+
+# Visualization
+plotly>=5.15.0
+streamlit>=1.28.0
+
+# Machine Learning
+scikit-learn>=1.3.0
+xgboost>=1.7.0
+joblib>=1.3.0
+
+# Geospatial
+# geopandas>=0.13.0  # Optional: uncomment for advanced geo ops
+
+# Database (optional)
+# psycopg2-binary>=2.9.0   # PostgreSQL
+# duckdb>=0.9.0             # DuckDB
+
+# Utilities
+python-dotenv>=1.0.0
+tqdm>=4.65.0
