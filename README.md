@@ -12,7 +12,6 @@
 
 **End-to-end logistics intelligence platform analysing 1M+ delivery records to identify route inefficiencies, SLA risks, and operational bottlenecks across a high-volume last-mile delivery network.**
 
-[🚀 Live Demo](#quick-start) · [📊 Architecture](#architecture) · [📦 Features](#features) · [🤖 Models](#predictive-models)
 
 </div>
 
