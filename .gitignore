@@ -12,3 +12,8 @@ data/processed/
 models/artifacts/*.pkl
 .DS_Store
 *.ipynb_checkpoints
+models/artifacts/*.pkl
+data/sample/*.parquet
+data/raw/
+data/processed/
+logs/
