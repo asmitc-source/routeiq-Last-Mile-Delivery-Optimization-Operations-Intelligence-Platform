@@ -165,7 +165,7 @@ python run_pipeline.py --full
 streamlit run dashboard/app.py
 ```
 
-Dashboard available at `http://localhost:8501`
+You will see something like "Dashboard available at `http://localhost:8501`" copy and check out the dashboard.
 
 ---
 
