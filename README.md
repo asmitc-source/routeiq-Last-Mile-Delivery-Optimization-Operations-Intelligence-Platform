@@ -216,10 +216,9 @@ The platform auto-generates operational recommendations including:
 
 ---
 
-Made with <3 by: Asmit Choudhary
 
 ---
 
 <div align="center">
-Built with ⚡ for operations analytics excellence
+Built with ⚡ for operations analytics excellence by ASMIT CHOUDHARY
 </div>
